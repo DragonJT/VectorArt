@@ -34,13 +34,7 @@ static class Program
 
             var camera = new Camera2D{Offset = Raylib.GetScreenCenter(), Rotation = 0, Target = Vector2.Zero, Zoom = 1};
             Raylib.BeginMode2D(camera);
-            foreach(var g in Scene.gameObjects)
-            {
-                foreach(var c in g.components)
-                {
-                    c.Render();
-                }
-            }
+            Scene.Render(Scene.gameObjects);
             Raylib.EndMode2D();
 
             hierarchy.Draw(new Rectangle(20,20,500,scrHeight-40), Scene.gameObjects);

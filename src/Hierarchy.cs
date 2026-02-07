@@ -1,5 +1,25 @@
 
+using System.Numerics;
 using Raylib_cs;
+using System.Reflection;
+
+static class HierarchyMenuItems
+{
+    public static void Empty(GameObject parent)
+    {
+        GameObject.Create(parent, "GameObject", []);
+    }
+
+    public static void AddRect(GameObject parent)
+    {
+        GameObject.Create(parent, "Rect", [typeof(RectangleRenderer)]);
+    }
+
+    public static void AddEllipse(GameObject parent)
+    {
+        GameObject.Create(parent, "Ellipse", [typeof(EllipseRenderer)]);
+    }
+}
 
 class HierarchyLayout
 {
@@ -28,6 +48,15 @@ class Hierarchy
 {
     public GameObject selected;
 
+    void CallMenu(GameObject parent, Vector2 position)
+    {
+        var menuItems = typeof(HierarchyMenuItems)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Select(m=>new MenuItem(m.Name, ()=>m.Invoke(null, [parent])))
+            .ToArray();
+        Program.contextMenu = new ContextMenu(position, menuItems);
+    }
+
     void Draw(HierarchyLayout layout, List<GameObject> gameObjects, int indent)
     {
         foreach(var g in gameObjects)
@@ -51,8 +80,7 @@ class Hierarchy
                 }
                 else if (Raylib.IsMouseButtonPressed(MouseButton.Right))
                 {
-                    selected = g;
-                    g.children.Add(new GameObject{name = "GameObject"});
+                    CallMenu(g, rect.Center);
                 }
             }
             string openText = g.open ? "+ " : "- ";
@@ -73,8 +101,7 @@ class Hierarchy
         }
         if (MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Right))
         {
-            selected = new GameObject{name = "GameObject"};
-            Scene.gameObjects.Add(selected);
+            CallMenu(null, Raylib.GetMousePosition());
         }
         Raylib.BeginScissorMode((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);
         Raylib.ClearBackground(new Color(0.15f, 0.15f, 0.15f));
@@ -82,9 +109,4 @@ class Hierarchy
         Raylib.EndScissorMode();
         Raylib.DrawRectangleLinesEx(rect, 4, Color.Blue);
     }
-}
-
-static class Scene
-{
-    public static readonly List<GameObject> gameObjects = [];
 }
