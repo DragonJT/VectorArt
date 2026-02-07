@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using Raylib_cs;
 
 class InspectorLayout
@@ -40,6 +41,12 @@ interface IByteValue
     void SetValue(byte value);
 }
 
+interface ISliderValue
+{
+    float GetValue01();
+    void SetValue01(float value);
+}
+
 interface ICall
 {
     void Call(Vector2 position);
@@ -56,9 +63,19 @@ class StructValue
         this.obj = obj;
     }
 
-    public FieldValue GetField(string field)
+    public FieldByteValue GetByteField(string field)
     {
-        return new FieldValue(this, fieldInfo.FieldType.GetField(field));
+        return new FieldByteValue(this, fieldInfo.FieldType.GetField(field));
+    }
+
+    public FieldFloatValue GetFloatField(string field)
+    {
+        return new FieldFloatValue(this, fieldInfo.FieldType.GetField(field));
+    }
+
+    public FieldByteSliderValue GetFieldByteSliderValue(string field)
+    {
+        return new FieldByteSliderValue(this, fieldInfo.FieldType.GetField(field));
     }
 
     public object GetValue()
@@ -72,39 +89,58 @@ class StructValue
     }
 }
 
-class FieldValue : IFloatValue, IByteValue
+class FieldFloatValue(StructValue structValue, FieldInfo fieldInfo) : IFloatValue
 {
-    StructValue structValue;
-    FieldInfo fieldInfo;
+    StructValue structValue = structValue;
+    FieldInfo fieldInfo = fieldInfo;
 
-    public FieldValue(StructValue structValue, FieldInfo fieldInfo)
-    {
-        this.structValue = structValue;
-        this.fieldInfo = fieldInfo;  
-    }
-
-    void IFloatValue.SetValue(float value)
-    {
-        var obj = structValue.GetValue();
-        fieldInfo.SetValue(obj, value);
-        structValue.SetValue(obj);
-    }
-
-    float IFloatValue.GetValue()
+    public float GetValue()
     {
         return (float)fieldInfo.GetValue(structValue.GetValue());   
     }
 
-    void IByteValue.SetValue(byte value)
+    public void SetValue(float value)
+    {
+        var obj = structValue.GetValue();
+        fieldInfo.SetValue(obj, value);
+        structValue.SetValue(obj);
+    }
+}
+
+class FieldByteValue(StructValue structValue, FieldInfo fieldInfo) : IByteValue
+{
+    StructValue structValue = structValue;
+    FieldInfo fieldInfo = fieldInfo;
+
+    public void SetValue(byte value)
     {
         var obj = structValue.GetValue();
         fieldInfo.SetValue(obj, value);
         structValue.SetValue(obj);
     }
 
-    byte IByteValue.GetValue()
+    public byte GetValue()
     {
         return (byte)fieldInfo.GetValue(structValue.GetValue());   
+    }
+}
+
+class FieldByteSliderValue(StructValue structValue, FieldInfo fieldInfo) : ISliderValue
+{
+    StructValue structValue = structValue;
+    FieldInfo fieldInfo = fieldInfo;
+
+    public float GetValue01()
+    {
+        return (byte)fieldInfo.GetValue(structValue.GetValue()) / 255f;
+    }
+
+    public void SetValue01(float value)
+    {
+        var v = (byte)(float.Clamp(value, 0, 1) * 255);
+        var obj = structValue.GetValue();
+        fieldInfo.SetValue(obj, v);
+        structValue.SetValue(obj);
     }
 }
 
@@ -276,49 +312,35 @@ class FloatStringValue : IStringValue
     }
 }
 
-class CallAction(Action<Vector2> action) : ICall
-{
-    readonly Action<Vector2> action = action;
-
-    public void Call(Vector2 position)
-    {
-        action(position);
-    }
-}
-
-class Button : IGUI, ISelectable
+abstract class CoreButton : IGUI, ISelectable
 {
     public bool Selected{get;set;}
     Rectangle rect;
-    string text;
-    Action<Vector2> action;
 
-    public Button(Rectangle rect, string text, Action<Vector2> action)
+    public CoreButton(Rectangle rect)
     {
         this.rect = rect;
-        this.text = text;
-        this.action = action;
     }
+
+    public abstract void OnClick(Vector2 position);
+
+    public abstract void DrawContent(Rectangle rect, bool mouseOverOrSelected);
 
     public void Update(InspectorLayout layout)
     {
         var rect = layout.GetRect(this.rect);
-        var color = Selected ? Color.White : Color.Blue;
-        if(MouseOver.current == this)
-        {
-            color = Color.White;
-        }
+        var mouseOverOrSelected = Selected || MouseOver.current == this;
         if(Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
         {
             MouseOver.last = this;
         }
         if (Program.contextMenu==null && MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Left))
         {
-            action(rect.Position);   
+            OnClick(rect.Position);  
         }
         if (Program.contextMenu==null && Selected && Library.IsKeyPressed(KeyboardKey.Enter))
         {
-            action(rect.Position);
+            OnClick(rect.Position);
         }
 
         if ((MouseOver.current == this && Raylib.IsMouseButtonDown(MouseButton.Left)) 
@@ -326,8 +348,150 @@ class Button : IGUI, ISelectable
         {
             Raylib.DrawRectangleRec(rect, new Color(0,1,0.4f));
         }
+        Raylib.DrawRectangleLinesEx(rect, 3, mouseOverOrSelected ? Color.White:Color.Blue);
+        DrawContent(rect, mouseOverOrSelected);
+    }
+}
+
+class Button : CoreButton
+{
+    string text;
+    Action<Vector2> action;
+
+    public Button(Rectangle rect, string text, Action<Vector2> action) : base(rect)
+    {
+        this.text = text;
+        this.action = action;
+    }
+
+    public override void DrawContent(Rectangle rect, bool mouseOverOrSelected)
+    {
+        Raylib.DrawText(text, (int)rect.X, (int)rect.Y, Library.fontSize, mouseOverOrSelected ? Color.White:Color.Blue);
+    }
+
+    public override void OnClick(Vector2 position)
+    {
+        action(position);
+    }
+}
+
+interface IContextWindow
+{
+    void Update();
+}
+
+class ColorWindow : IContextWindow
+{
+    Rectangle rect;
+    List<IGUI> guis = [];
+
+    void AddField(float width, StructValue structValue, string fieldName, ref float y)
+    {
+        var sliderValue = structValue.GetFieldByteSliderValue(fieldName);
+        var x = 0f;
+        guis.Add(new Label(new Vector2(x+10,y), fieldName, Color.Blue));
+        x += width * 0.3f;
+        guis.Add(new Slider(new Rectangle(x,y,width * 0.7f,Library.fontSize).GrowX(-10), sliderValue));
+        y += Library.lineSize;
+    }
+
+    public ColorWindow(StructValue structValue, Vector2 position)
+    {
+        rect = new Rectangle(position, Library.contextMenuWidth, Library.lineSize * 4);
+        var width = rect.Width;
+        var y = 0f;
+        AddField(width, structValue, "R", ref y);
+        AddField(width, structValue, "G", ref y);
+        AddField(width, structValue, "B", ref y);
+        AddField(width, structValue, "A", ref y);
+    }
+
+    public void Update()
+    {
+        bool mouseOver = Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect);
+        if(!mouseOver && Raylib.IsMouseButtonPressed(MouseButton.Left))
+        {
+            Program.contextMenu = null;
+        }
+        if(mouseOver)
+        {
+            MouseOver.last = this;
+        }
+        GUIWindow.DrawGUIWindow(rect, guis, true);
+    }
+}
+
+class ColorPicker : CoreButton
+{
+    public readonly StructValue structValue;
+
+    public ColorPicker(Rectangle rect, StructValue structValue) : base(rect)
+    {
+        this.structValue = structValue;
+    }
+
+    public override void DrawContent(Rectangle rect, bool mouseOverOrSelected)
+    {
+        rect.Grow(-5);
+        Raylib.DrawRectangleRec(rect, (Color)structValue.GetValue());
+    }
+
+    public override void OnClick(Vector2 position)
+    {
+        Program.contextMenu = new ColorWindow(structValue, position);
+    }
+}
+
+class Slider : IGUI, ISelectable
+{
+    public bool Selected{get;set;}
+    Rectangle rect;
+    ISliderValue sliderValue;
+    bool dragging = false;
+
+    public Slider(Rectangle rect, ISliderValue sliderValue)
+    {
+        this.rect = rect;
+        this.sliderValue = sliderValue;
+    }
+
+    public void Update(InspectorLayout layout)
+    {
+        var rect = layout.GetRect(this.rect);
+        float val = sliderValue.GetValue01();
+        if (Selected)
+        {
+            if (Library.IsKeyPressed(KeyboardKey.Left))
+            {
+                val -= 0.01f;
+            }
+            if (Library.IsKeyPressed(KeyboardKey.Right))
+            {
+                val += 0.01f;
+            }
+            sliderValue.SetValue01(val);
+        }
+        if(Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
+        {
+            MouseOver.last = this;
+        }
+        if (MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Left))
+        {
+            dragging = true;
+        }
+        if (dragging)
+        {
+            sliderValue.SetValue01((Raylib.GetMousePosition().X - rect.X) / rect.Width);
+        }
+        if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+        {
+            dragging = false;
+        }
+        var color = Selected ? Color.White : Color.Blue;
         Raylib.DrawRectangleLinesEx(rect, 3, color);
-        Raylib.DrawText(text, (int)rect.X, (int)rect.Y, Library.fontSize, color);
+        var r = rect;
+        r.Grow(-5);
+        Raylib.DrawRectangleRec(new Rectangle(r.X, r.Y, r.Width * val, r.Height), color);
     }
 }
 
@@ -396,6 +560,37 @@ interface ISelectable
     bool Selected{get;set;}
 }
 
+static class GUIWindow
+{
+    static void SetSelectable(List<ISelectable> selectables, int index, bool selected)
+    {
+        if(index >= 0 && index < selectables.Count)
+        {
+            selectables[index].Selected = selected;
+        }
+    }
+
+    public static void DrawGUIWindow(Rectangle rect, List<IGUI> guis, bool allowTab)
+    {
+        Raylib.BeginScissorMode((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);
+        Raylib.ClearBackground(new Color(0.15f, 0.15f, 0.15f));
+        InspectorLayout layout = new(rect.Position);
+        if (allowTab && Library.IsKeyPressed(KeyboardKey.Tab))
+        {
+            var selectables = guis.OfType<ISelectable>().ToList();
+            var index = selectables.FindIndex(s=>s.Selected);
+            SetSelectable(selectables, index, false);
+            SetSelectable(selectables, index+1, true);
+        }
+        foreach(var g in guis)
+        {
+            g.Update(layout);
+        }
+        Raylib.EndScissorMode();
+        Raylib.DrawRectangleLinesEx(rect, 4, Color.Blue);
+    }
+}
+
 class Inspector
 {
     object gameObject;
@@ -412,10 +607,10 @@ class Inspector
                 guis.Add(new Label(new Vector2(x+10,y), f.Name, Color.Blue));
                 x += width * 0.3f;
                 var vec2Value = new StructValue(f, obj);
-                var xval = new FloatStringValue(vec2Value.GetField("X"));
+                var xval = new FloatStringValue(vec2Value.GetFloatField("X"));
                 guis.Add(new Textbox(new Rectangle(x,y,width*0.35f,Library.fontSize).GrowX(-10), xval));
                 x += width * 0.35f;
-                var yval = new FloatStringValue(vec2Value.GetField("Y"));
+                var yval = new FloatStringValue(vec2Value.GetFloatField("Y"));
                 guis.Add(new Textbox(new Rectangle(x,y,width*0.35f,Library.fontSize).GrowX(-10), yval));
                 y += Library.lineSize;
             }
@@ -439,19 +634,8 @@ class Inspector
             {
                 guis.Add(new Label(new Vector2(x+10,y), f.Name, Color.Blue));
                 x += width * 0.3f;
-                var iwidth = 0.7f / 4f;
                 var colorValue = new StructValue(f, obj);
-                var rval = new ByteStringValue(colorValue.GetField("R"));
-                guis.Add(new Textbox(new Rectangle(x,y,width*iwidth,Library.fontSize).GrowX(-10), rval));
-                x += width * iwidth;
-                var gval = new ByteStringValue(colorValue.GetField("G"));
-                guis.Add(new Textbox(new Rectangle(x,y,width*iwidth,Library.fontSize).GrowX(-10), gval));
-                x += width * iwidth;
-                var bval = new ByteStringValue(colorValue.GetField("B"));
-                guis.Add(new Textbox(new Rectangle(x,y,width*iwidth,Library.fontSize).GrowX(-10), bval));
-                x += width * iwidth;
-                var aval = new ByteStringValue(colorValue.GetField("A"));
-                guis.Add(new Textbox(new Rectangle(x,y,width*iwidth,Library.fontSize).GrowX(-10), aval));
+                guis.Add(new ColorPicker(new Rectangle(x,y,width * 0.7f,Library.fontSize).GrowX(-10), colorValue));
                 y += Library.lineSize;
             }
         }
@@ -496,32 +680,9 @@ class Inspector
         }
     }
 
-    static void SetSelectable(List<ISelectable> selectables, int index, bool selected)
-    {
-        if(index >= 0 && index < selectables.Count)
-        {
-            selectables[index].Selected = selected;
-        }
-    }
-
     public void Update(Rectangle rect, GameObject gameObject)
     {
         SetObject(gameObject, rect.Width);
-        Raylib.BeginScissorMode((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);
-        Raylib.ClearBackground(new Color(0.15f, 0.15f, 0.15f));
-        InspectorLayout layout = new(rect.Position);
-        if (Library.IsKeyPressed(KeyboardKey.Tab))
-        {
-            var selectables = guis.OfType<ISelectable>().ToList();
-            var index = selectables.FindIndex(s=>s.Selected);
-            SetSelectable(selectables, index, false);
-            SetSelectable(selectables, index+1, true);
-        }
-        foreach(var g in guis)
-        {
-            g.Update(layout);
-        }
-        Raylib.EndScissorMode();
-        Raylib.DrawRectangleLinesEx(rect, 4, Color.Blue);
+        GUIWindow.DrawGUIWindow(rect, guis, Program.contextMenu == null);
     }
 }

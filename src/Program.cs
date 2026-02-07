@@ -15,7 +15,7 @@ static class MouseOver
 
 static class Program
 {
-    public static ContextMenu contextMenu = null;
+    public static IContextWindow contextMenu = null;
 
     static void Main()
     {

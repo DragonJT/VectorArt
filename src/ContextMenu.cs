@@ -3,7 +3,7 @@ using Raylib_cs;
 
 record MenuItem(string Text, Action Action);
 
-class ContextMenu
+class ContextMenu : IContextWindow
 {
     Rectangle rect;
     MenuItem[] items;
@@ -35,7 +35,7 @@ class ContextMenu
                 id = 0;
             }
         }
-        if (!firstFrame && (Library.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsMouseButtonPressed(MouseButton.Left)))
+        if (!firstFrame && Library.IsKeyPressed(KeyboardKey.Enter))
         {
             items[id].Action();
             Program.contextMenu = null;
@@ -44,11 +44,26 @@ class ContextMenu
         var x = (int)rect.X;
         var y = (int)rect.Y;
         Raylib.DrawRectangleRec(rect, new Color(0.25f,0.25f,0.25f));
+        bool mouseOver = Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect);
+        bool leftClick = Raylib.IsMouseButtonPressed(MouseButton.Left);
+        if(!mouseOver && leftClick)
+        {
+            Program.contextMenu = null;
+        }
+        if(mouseOver)
+        {
+            MouseOver.last = this;
+        }
         for(var i = 0; i < items.Length; i++)
         {
             var itemRect = new Rectangle(x,y,Library.contextMenuWidth, Library.lineSize);
-            bool mouseOver = Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), itemRect);
-            if (mouseOver && Raylib.GetMouseDelta().Length() > 0)
+            bool mouseOverItem = Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), itemRect);
+            if(mouseOverItem && leftClick)
+            {
+                items[i].Action();
+                Program.contextMenu = null;
+            }
+            if (mouseOverItem && Raylib.GetMouseDelta().Length() > 0)
             {
                 id = i;
             }

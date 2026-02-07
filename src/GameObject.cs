@@ -36,6 +36,18 @@ class GameObject
         return g;
     }
 
+    public void Delete()
+    {
+        if(parent == null)
+        {
+            Scene.gameObjects.Remove(this);
+        }
+        else
+        {
+            parent.children.Remove(this);
+        }
+    }
+
     public void AddComponent(Type type)
     {
         var component = (Component)Activator.CreateInstance(type);

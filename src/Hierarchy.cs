@@ -5,19 +5,25 @@ using System.Reflection;
 
 static class HierarchyMenuItems
 {
-    public static GameObject Empty(GameObject parent)
+    public static void Empty(Hierarchy hierarchy, GameObject gameObject)
     {
-        return GameObject.Create(parent, "GameObject", []);
+        hierarchy.selected = GameObject.Create(gameObject, "GameObject", []);
     }
 
-    public static GameObject AddRect(GameObject parent)
+    public static void AddRect(Hierarchy hierarchy, GameObject gameObject)
     {
-        return GameObject.Create(parent, "Rect", [typeof(RectangleRenderer)]);
+        hierarchy.selected = GameObject.Create(gameObject, "Rect", [typeof(RectangleRenderer)]);
     }
 
-    public static GameObject AddEllipse(GameObject parent)
+    public static void AddEllipse(Hierarchy hierarchy, GameObject gameObject)
     {
-        return GameObject.Create(parent, "Ellipse", [typeof(EllipseRenderer)]);
+        hierarchy.selected = GameObject.Create(gameObject, "Ellipse", [typeof(EllipseRenderer)]);
+    }
+
+    public static void Delete(Hierarchy hierarchy, GameObject gameObject)
+    {
+        gameObject.Delete();
+        hierarchy.selected = null;
     }
 }
 
@@ -52,7 +58,7 @@ class Hierarchy
     {
         var menuItems = typeof(HierarchyMenuItems)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Select(m=>new MenuItem(m.Name, ()=>selected = (GameObject)m.Invoke(null, [parent])))
+            .Select(m=>new MenuItem(m.Name, ()=>m.Invoke(null, [this, parent])))
             .ToArray();
         Program.contextMenu = new ContextMenu(position, menuItems);
     }
