@@ -54,17 +54,15 @@ static class Library
         return degrees * MathF.PI/180;
     }
 
-    static Matrix3x2 TRS(Vector2 position, float degrees, Vector2 scale)
+    public static Matrix3x2 TRS(Vector2 position, float degrees, Vector2 scale)
     {
         return Matrix3x2.CreateScale(scale.X, scale.Y) * 
             Matrix3x2.CreateRotation(DegreesToRadians(degrees)) * 
             Matrix3x2.CreateTranslation(position);
     }
 
-    public static void DrawRectangle(Vector2 center, float degrees, Vector2 size, Color color)
+    public static void DrawRectangle(Matrix3x2 m, Color color)
     {
-        var m = TRS(center, degrees, size);
-
         List<Vector2> points = [];
         points.Add(new Vector2(-1, -1));
         points.Add(new Vector2(1, -1));
@@ -73,10 +71,8 @@ static class Library
         DrawShape(TransformPoints(m, [..points]), color);
     }
 
-    public static void DrawEllipse(Vector2 center, float degrees, Vector2 size, int pointCount, Color color)
+    public static void DrawEllipse(Matrix3x2 m, int pointCount, Color color)
     {
-        var m = TRS(center, degrees, size);
-
         List<Vector2> points = [];
         var rads = 0f;
         var delta = MathF.PI * 2f / pointCount;

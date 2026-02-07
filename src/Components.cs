@@ -9,7 +9,7 @@ class RectangleRenderer:Component
     public override void Render()
     {
         var go = gameObject;
-        Library.DrawRectangle(go.position, go.degrees, size*go.scale, color);
+        Library.DrawRectangle(Matrix3x2.CreateScale(size.X, size.Y) * go.WorldMatrix(), color);
     }
 }
 
@@ -21,6 +21,6 @@ class EllipseRenderer:Component
     public override void Render()
     {
         var go = gameObject;
-        Library.DrawEllipse(go.position, go.degrees, size*go.scale, 20, color);
+        Library.DrawEllipse(Matrix3x2.CreateScale(size.X, size.Y) * go.WorldMatrix(), 20, color);
     }
 }

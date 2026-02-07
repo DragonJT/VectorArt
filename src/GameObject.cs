@@ -47,6 +47,20 @@ class GameObject
     {
         AddComponent(typeof(T));
     }
+
+    public Matrix3x2 LocalMatrix()
+    {
+        return Library.TRS(position, degrees, new Vector2(scale, scale));
+    }
+
+    public Matrix3x2 WorldMatrix()
+    {
+        if (parent != null)
+        {
+            return LocalMatrix() * parent.WorldMatrix();
+        }
+        return LocalMatrix();
+    }
 }
 
 abstract class Component
