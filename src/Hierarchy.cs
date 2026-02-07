@@ -5,19 +5,19 @@ using System.Reflection;
 
 static class HierarchyMenuItems
 {
-    public static void Empty(GameObject parent)
+    public static GameObject Empty(GameObject parent)
     {
-        GameObject.Create(parent, "GameObject", []);
+        return GameObject.Create(parent, "GameObject", []);
     }
 
-    public static void AddRect(GameObject parent)
+    public static GameObject AddRect(GameObject parent)
     {
-        GameObject.Create(parent, "Rect", [typeof(RectangleRenderer)]);
+        return GameObject.Create(parent, "Rect", [typeof(RectangleRenderer)]);
     }
 
-    public static void AddEllipse(GameObject parent)
+    public static GameObject AddEllipse(GameObject parent)
     {
-        GameObject.Create(parent, "Ellipse", [typeof(EllipseRenderer)]);
+        return GameObject.Create(parent, "Ellipse", [typeof(EllipseRenderer)]);
     }
 }
 
@@ -52,7 +52,7 @@ class Hierarchy
     {
         var menuItems = typeof(HierarchyMenuItems)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Select(m=>new MenuItem(m.Name, ()=>m.Invoke(null, [parent])))
+            .Select(m=>new MenuItem(m.Name, ()=>selected = (GameObject)m.Invoke(null, [parent])))
             .ToArray();
         Program.contextMenu = new ContextMenu(position, menuItems);
     }
@@ -81,6 +81,7 @@ class Hierarchy
                 else if (Raylib.IsMouseButtonPressed(MouseButton.Right))
                 {
                     CallMenu(g, rect.Center);
+
                 }
             }
             string openText = g.open ? "+ " : "- ";

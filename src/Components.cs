@@ -1,33 +1,26 @@
 using Raylib_cs;
+using System.Numerics;
 
 class RectangleRenderer:Component
 {
-    public Color color = Color.Black;
+    public Color color = Color.Blue;
+    public Vector2 size = new (100,100);
 
     public override void Render()
     {
         var go = gameObject;
-        Raylib.DrawRectangle(
-            (int)(go.position.X - go.scale.X), 
-            (int)(go.position.Y - go.scale.Y), 
-            (int)(go.scale.X*2), 
-            (int)(go.scale.Y*2), 
-            color);
+        Library.DrawRectangle(go.position, go.degrees, size*go.scale, color);
     }
 }
 
 class EllipseRenderer:Component
 {
-    public Color color = Color.Black;
+    public Color color = Color.Blue;
+    public Vector2 size = new (100,100);
 
     public override void Render()
     {
         var go = gameObject;
-        Raylib.DrawEllipse(
-            (int)go.position.X, 
-            (int)go.position.Y, 
-            (int)go.scale.X, 
-            (int)go.scale.Y, 
-            color);
+        Library.DrawEllipse(go.position, go.degrees, size*go.scale, 20, color);
     }
 }

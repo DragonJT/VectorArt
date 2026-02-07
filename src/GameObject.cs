@@ -7,8 +7,8 @@ class GameObject
     public GameObject parent;
     public string name;
     public Vector2 position;
-    public float rotation;
-    public Vector2 scale = new(1,1);
+    public float degrees;
+    public float scale = 1;
     public readonly List<GameObject> children = [];
     public readonly List<Component> components = [];
 

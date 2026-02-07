@@ -2,42 +2,6 @@ using System.Numerics;
 using System.Reflection;
 using Raylib_cs;
 
-static class Library
-{
-    public const int fontSize = 35;
-    public const int lineSize = 45;
-    public const int treeIndentSize = 80;
-    public const int contextMenuWidth = 400;
-    public const int spacing = 3;
-
-    public static Rectangle GrowX(this Rectangle rect, int x)
-    {
-        return new Rectangle(rect.X - x, rect.Y, rect.Width + x * 2, rect.Height);
-    }
-
-    public static bool IsKeyPressed(KeyboardKey key)
-    {
-        return Raylib.IsKeyPressed(key) || Raylib.IsKeyPressedRepeat(key);
-    }
-
-    public static void UpdateText(ref string text)
-    {
-        int key = Raylib.GetCharPressed();
-        while(key > 0)
-        {
-            text += (char)key;
-            key = Raylib.GetCharPressed();
-        }
-        if (IsKeyPressed(KeyboardKey.Backspace))
-        {
-            if(text.Length > 0)
-            {
-                text = text[..^1];
-            }
-        }
-    }
-}
-
 class InspectorLayout
 {
     Vector2 position;
@@ -506,7 +470,7 @@ class Inspector
             }
             this.gameObject = gameObject;
             var y = 10;
-            guis.Add(new Label(new Vector2(10, y), "Inspector", Color.White));
+            guis.Add(new Label(new Vector2(10, y), "GameObject", Color.White));
             y += Library.lineSize;
             AddObject(gameObject, ref y, width);
             foreach(var c in gameObject.components)
