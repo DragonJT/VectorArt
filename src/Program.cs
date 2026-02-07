@@ -15,6 +15,8 @@ static class MouseOver
 
 static class Program
 {
+    public static ContextMenu contextMenu = null;
+
     static void Main()
     {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
@@ -44,6 +46,7 @@ static class Program
             hierarchy.Draw(new Rectangle(20,20,500,scrHeight-40), Scene.gameObjects);
             var inspectorRect = new Rectangle(scrWidth - inspectorWidth - 20, 20, inspectorWidth, scrHeight - 40);
             inspector.Update(inspectorRect, hierarchy.selected);
+            contextMenu?.Update();
             MouseOver.LateUpdate();
             Raylib.EndDrawing();
         }

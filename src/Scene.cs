@@ -74,7 +74,6 @@ class Hierarchy
         if (MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Right))
         {
             selected = new GameObject{name = "GameObject"};
-            selected.AddComponent<RectangleRenderer>();
             Scene.gameObjects.Add(selected);
         }
         Raylib.BeginScissorMode((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);

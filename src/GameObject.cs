@@ -12,11 +12,16 @@ class GameObject
     public readonly List<GameObject> children = [];
     public readonly List<Component> components = [];
 
-    public void AddComponent<T>() where T:Component
+    public void AddComponent(Type type)
     {
-        var component = Activator.CreateInstance<T>();
+        var component = (Component)Activator.CreateInstance(type);
         component.gameObject = this;
         components.Add(component);
+    }
+
+    public void AddComponent<T>() where T:Component
+    {
+        AddComponent(typeof(T));
     }
 }
 

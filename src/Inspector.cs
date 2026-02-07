@@ -76,6 +76,10 @@ interface IByteValue
     void SetValue(byte value);
 }
 
+interface ICall
+{
+    void Call(Vector2 position);
+}
 
 class StructValue
 {
@@ -308,6 +312,61 @@ class FloatStringValue : IStringValue
     }
 }
 
+class CallAction(Action<Vector2> action) : ICall
+{
+    readonly Action<Vector2> action = action;
+
+    public void Call(Vector2 position)
+    {
+        action(position);
+    }
+}
+
+class Button : IGUI, ISelectable
+{
+    public bool Selected{get;set;}
+    Rectangle rect;
+    string text;
+    Action<Vector2> action;
+
+    public Button(Rectangle rect, string text, Action<Vector2> action)
+    {
+        this.rect = rect;
+        this.text = text;
+        this.action = action;
+    }
+
+    public void Update(InspectorLayout layout)
+    {
+        var rect = layout.GetRect(this.rect);
+        var color = Selected ? Color.White : Color.Blue;
+        if(MouseOver.current == this)
+        {
+            color = Color.White;
+        }
+        if(Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
+        {
+            MouseOver.last = this;
+        }
+        if (Program.contextMenu==null && MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Left))
+        {
+            action(rect.Position);   
+        }
+        if (Program.contextMenu==null && Selected && Library.IsKeyPressed(KeyboardKey.Enter))
+        {
+            action(rect.Position);
+        }
+
+        if ((MouseOver.current == this && Raylib.IsMouseButtonDown(MouseButton.Left)) 
+            || (Selected && Raylib.IsKeyDown(KeyboardKey.Enter)))
+        {
+            Raylib.DrawRectangleRec(rect, new Color(0,1,0.4f));
+        }
+        Raylib.DrawRectangleLinesEx(rect, 3, color);
+        Raylib.DrawText(text, (int)rect.X, (int)rect.Y, Library.fontSize, color);
+    }
+}
+
 class Textbox : IGUI, ISelectable
 {
     public bool Selected{get;set;}
@@ -377,6 +436,7 @@ class Inspector
 {
     object gameObject;
     List<IGUI> guis = [];
+    bool refresh;
 
     void AddObject(object obj, ref int y, float width)
     {
@@ -435,26 +495,40 @@ class Inspector
 
     void SetObject(GameObject gameObject, float width)
     {
-        if(this.gameObject == gameObject)
+        if(this.gameObject != gameObject || refresh)
         {
-            return;
-        }
-        guis.Clear();
-        if(gameObject == null)
-        {
-            this.gameObject = null;
-            return;
-        }
-        this.gameObject = gameObject;
-        var y = 10;
-        guis.Add(new Label(new Vector2(10, y), "Inspector", Color.White));
-        y += Library.lineSize;
-        AddObject(gameObject, ref y, width);
-        foreach(var c in gameObject.components)
-        {
-            guis.Add(new Label(new Vector2(10, y), c.GetType().Name, Color.White));
+            refresh = false;
+            guis.Clear();
+            if(gameObject == null)
+            {
+                this.gameObject = null;
+                return;
+            }
+            this.gameObject = gameObject;
+            var y = 10;
+            guis.Add(new Label(new Vector2(10, y), "Inspector", Color.White));
             y += Library.lineSize;
-            AddObject(c, ref y, width);
+            AddObject(gameObject, ref y, width);
+            foreach(var c in gameObject.components)
+            {
+                guis.Add(new Label(new Vector2(10, y), c.GetType().Name, Color.White));
+                y += Library.lineSize;
+                AddObject(c, ref y, width);
+            }
+            Action<Vector2> action = p =>
+            {
+                var items = Assembly.GetExecutingAssembly()
+                    .GetTypes()
+                    .Where(t=>t.IsAssignableTo(typeof(Component)))
+                    .Where(t=>!t.IsAbstract)
+                    .Select(t=>new MenuItem(t.Name, ()=>{
+                        gameObject.AddComponent(t);
+                        refresh = true;
+                    }))
+                    .ToArray();
+                Program.contextMenu = new ContextMenu(p, items);
+            };
+            guis.Add(new Button(new Rectangle(10, y, width-20, Library.fontSize), "Add Component", action));
         }
     }
 

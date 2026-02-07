@@ -15,3 +15,19 @@ class RectangleRenderer:Component
             color);
     }
 }
+
+class EllipseRenderer:Component
+{
+    public Color color = Color.Black;
+
+    public override void Render()
+    {
+        var go = gameObject;
+        Raylib.DrawEllipse(
+            (int)go.position.X, 
+            (int)go.position.Y, 
+            (int)go.scale.X, 
+            (int)go.scale.Y, 
+            color);
+    }
+}
