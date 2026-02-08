@@ -20,6 +20,15 @@ static class HierarchyMenuItems
         hierarchy.selected = GameObject.Create(gameObject, "Ellipse", [typeof(EllipseRenderer)]);
     }
 
+    public static void Duplicate(Hierarchy hierarchy, GameObject gameObject)
+    {
+        var parent = gameObject.parent;
+        var serializer = new Serializer();
+        serializer.Write(gameObject);
+        var deserializer = new DeSerializer([..serializer.bytes]);
+        hierarchy.selected = deserializer.ReadGameObject(parent);
+    }
+
     public static void Delete(Hierarchy hierarchy, GameObject gameObject)
     {
         gameObject.Delete();

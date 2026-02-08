@@ -9,8 +9,8 @@ class GameObject
     public Vector2 position;
     public float degrees;
     public float scale = 1;
-    public readonly List<GameObject> children = [];
     public readonly List<Component> components = [];
+    public readonly List<GameObject> children = [];
 
     GameObject(GameObject parent, string name)
     {
@@ -77,6 +77,7 @@ class GameObject
 
 abstract class Component
 {
+    [DoNotSerialize]
     public GameObject gameObject;
 
     public T GetComponent<T>() where T:Component
