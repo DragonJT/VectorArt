@@ -330,10 +330,7 @@ abstract class CoreButton : IGUI, ISelectable
     {
         var rect = layout.GetRect(this.rect);
         var mouseOverOrSelected = Selected || MouseOver.current == this;
-        if(Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
-        {
-            MouseOver.last = this;
-        }
+        MouseOver.TrySetMouseOver(rect, this);
         if (Program.contextMenu==null && MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Left))
         {
             OnClick(rect.Position);  
@@ -413,10 +410,7 @@ class ColorWindow : IContextWindow
         {
             Program.contextMenu = null;
         }
-        if(mouseOver)
-        {
-            MouseOver.last = this;
-        }
+        MouseOver.TrySetMouseOver(rect, this);
         GUIWindow.DrawGUIWindow(rect, guis, true);
     }
 }
@@ -471,10 +465,7 @@ class Slider : IGUI, ISelectable
             }
             sliderValue.SetValue01(val);
         }
-        if(Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
-        {
-            MouseOver.last = this;
-        }
+        MouseOver.TrySetMouseOver(rect, this);
         if (MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Left))
         {
             dragging = true;
@@ -516,10 +507,7 @@ class Textbox : IGUI, ISelectable
             Library.UpdateText(ref text);
             value.SetValue(text);
         }
-        if(Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
-        {
-            MouseOver.last = this;
-        }
+        MouseOver.TrySetMouseOver(rect, this);
         if (Raylib.IsMouseButtonPressed(MouseButton.Left))
         {
             Selected = MouseOver.current == this;

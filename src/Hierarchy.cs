@@ -31,7 +31,7 @@ static class HierarchyMenuItems
 
     public static void Delete(Hierarchy hierarchy, GameObject gameObject)
     {
-        gameObject.Delete();
+        gameObject?.Delete();
         hierarchy.selected = null;
     }
 }
@@ -63,11 +63,11 @@ class Hierarchy
 {
     public GameObject selected;
 
-    void CallMenu(GameObject parent, Vector2 position)
-    {
+    void CallMenu(GameObject gameObject, Vector2 position)
+    {   
         var menuItems = typeof(HierarchyMenuItems)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Select(m=>new MenuItem(m.Name, ()=>m.Invoke(null, [this, parent])))
+            .Select(m=>new MenuItem(m.Name, ()=>m.Invoke(null, [this, gameObject])))
             .ToArray();
         Program.contextMenu = new ContextMenu(position, menuItems);
     }
@@ -82,10 +82,7 @@ class Hierarchy
                 Raylib.DrawRectangleRec(rect, Color.SkyBlue);
                 Raylib.DrawRectangleLinesEx(rect, 4, Color.Blue);
             }
-            if (Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
-            {
-                MouseOver.last = g;
-            }
+            MouseOver.TrySetMouseOver(rect, g);
             if(MouseOver.current == g)
             {
                 if (Raylib.IsMouseButtonPressed(MouseButton.Left))
@@ -95,8 +92,7 @@ class Hierarchy
                 }
                 else if (Raylib.IsMouseButtonPressed(MouseButton.Right))
                 {
-                    CallMenu(g, rect.Center);
-
+                    CallMenu(g, Raylib.GetMousePosition());
                 }
             }
             string openText = g.open ? "+ " : "- ";
@@ -111,10 +107,7 @@ class Hierarchy
     public void Draw(Rectangle rect, List<GameObject> gameObjects)
     {
         HierarchyLayout layout = new(rect);
-        if (Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
-        {
-            MouseOver.last = this;
-        }
+        MouseOver.TrySetMouseOver(rect, this);
         if (MouseOver.current == this && Raylib.IsMouseButtonPressed(MouseButton.Right))
         {
             CallMenu(null, Raylib.GetMousePosition());

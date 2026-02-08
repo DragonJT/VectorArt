@@ -4,7 +4,25 @@ using Raylib_cs;
 static class MouseOver
 {
     public static object current;
-    public static object last;
+    static object last;
+
+    public static void TrySetMouseOver(Rectangle rect, object obj)
+    {
+        if(Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect))
+        {
+            last = obj;
+        }
+    }
+
+    public static void TrySetMouseOver(Rectangle rect, Camera2D camera, object obj)
+    {
+        var pos = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+        if(Raylib.CheckCollisionPointRec(pos, rect))
+        {
+            last = obj;
+        }
+    }
+
 
     public static void LateUpdate()
     {
@@ -25,6 +43,8 @@ static class Program
         var hierarchy = new Hierarchy();
         const int inspectorWidth = 600;
         var inspector = new Inspector();
+        Gizmo gizmo = new();
+
         while (!Raylib.WindowShouldClose())
         {
             var scrWidth = Raylib.GetScreenWidth();
@@ -35,6 +55,7 @@ static class Program
             var camera = new Camera2D{Offset = Raylib.GetScreenCenter(), Rotation = 0, Target = Vector2.Zero, Zoom = 1};
             Raylib.BeginMode2D(camera);
             Scene.Render(Scene.gameObjects);
+            gizmo.Update(hierarchy.selected, camera);
             Raylib.EndMode2D();
 
             hierarchy.Draw(new Rectangle(20,20,500,scrHeight-40), Scene.gameObjects);

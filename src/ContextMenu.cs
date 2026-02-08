@@ -1,7 +1,11 @@
 using System.Numerics;
 using Raylib_cs;
 
-record MenuItem(string Text, Action Action);
+class MenuItem(string text, Action action)
+{
+    public readonly string text = text;
+    public readonly Action action = action;
+}
 
 class ContextMenu : IContextWindow
 {
@@ -37,30 +41,24 @@ class ContextMenu : IContextWindow
         }
         if (!firstFrame && Library.IsKeyPressed(KeyboardKey.Enter))
         {
-            items[id].Action();
+            items[id].action();
             Program.contextMenu = null;
         }
         
         var x = (int)rect.X;
         var y = (int)rect.Y;
         Raylib.DrawRectangleRec(rect, new Color(0.25f,0.25f,0.25f));
-        bool mouseOver = Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect);
         bool leftClick = Raylib.IsMouseButtonPressed(MouseButton.Left);
-        if(!mouseOver && leftClick)
-        {
-            Program.contextMenu = null;
-        }
-        if(mouseOver)
-        {
-            MouseOver.last = this;
-        }
+        bool mouseOver = false;
         for(var i = 0; i < items.Length; i++)
         {
             var itemRect = new Rectangle(x,y,Library.contextMenuWidth, Library.lineSize);
-            bool mouseOverItem = Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), itemRect);
+            bool mouseOverItem = MouseOver.current == items[i];
+            if(mouseOverItem) mouseOver = true;
+            MouseOver.TrySetMouseOver(itemRect, items[i]);
             if(mouseOverItem && leftClick)
             {
-                items[i].Action();
+                items[i].action();
                 Program.contextMenu = null;
             }
             if (mouseOverItem && Raylib.GetMouseDelta().Length() > 0)
@@ -73,8 +71,12 @@ class ContextMenu : IContextWindow
                 Raylib.DrawRectangleRec(itemRect, new Color(0, 1, 0.4f));
                 color = Color.White;
             }
-            Raylib.DrawText(items[i].Text, x, y, Library.fontSize, color);
-            y+=Library.lineSize;
+            Raylib.DrawText(items[i].text, x, y, Library.fontSize, color);
+            y += Library.lineSize;
+        }
+        if(!mouseOver && leftClick)
+        {
+            Program.contextMenu = null;
         }
         Raylib.DrawRectangleLinesEx(rect, 4, Color.Blue);
         firstFrame = false;
